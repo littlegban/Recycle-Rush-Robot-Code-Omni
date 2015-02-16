@@ -19,12 +19,14 @@ private:
 	float wspeed = 0.0;
 	float wdirection = 0.0;
 
-	Joystick *LeftStick; //Left and Right sticks are for driving
+	Joystick *LeftStick; //Left Stick
 	float LeftStickInput = 0.0;
 	bool LeftStickTrigger = false; // LeftStick Trigger (1)
-	Joystick *RightStick;
+	
+	Joystick *RightStick; //Right Stick
 	float RightStickInput = 0.0;
 	bool RightTrigger1 = false; // NCIU
+	
 	Joystick *XBoxPlayer1; //Controller of basically anything that isn't drive
 	//XBox Controller Buttons
 	//A = 1    B = 2  X = 3   Y = 4  LB = 5  RB = 6  Back = 7  Start = 8  LeftTrigger Click = 9  RightTrigger Click = 10
@@ -37,10 +39,11 @@ private:
 	float RightXBoxXInput = 0.0; //NCIU
 	float RightXboxYInput = 0.0; //NCIU
 
-	Talon *LiftMotor;
+	Talon *LiftMotor; 
 	bool MotorForward = false;
 	bool MotorReverse = false;
-
+		
+		
 	DigitalInput *LimitSwitchTop;
 	bool LimitSwitchTopCheck = false; //NCIU
 	DigitalInput *LimitSwitchBot;
@@ -60,7 +63,8 @@ private:
 		TalonSRX4 = new CANTalon(4);
 
 		DriveSystem = new RobotDrive(TalonSRX1, TalonSRX2, TalonSRX3, TalonSRX4); //Keeping this in just in case we suddenly need it
-
+		
+		//adding the sticks to the robot
 		LeftStick = new Joystick(0);
 		RightStick = new Joystick(1);
 		XBoxPlayer1 = new Joystick(2);
@@ -74,33 +78,79 @@ private:
 	} //End RobotInit
 //////////////////////////////////////////////////////FUNCTIONS FOR AUTONOMOUS///////////////////////////////////////////////////////////////
 															////Drive////
-	void Drive(int wxdirection, float wxtime) //Drive takes direction and time, direction choses forwards or reverse time decides the time
-	{
+	void Drive(int wxdirection, float wxtime, float wxspeed) //Drive takes direction and time, direction choses forwards or reverse time decides the time
+	{	
+		float speed = wxspeed;
+		
+		//If the user enters a speed pass the max speed we will set their speed to the maxspeed
+		if (speed > 1) {
+			speed = 1;	
+		}
+		if (speed <= 0)      //If the value they entered is less than or equal to zero set the speed to the default. 
+		{                           //This should also work if there is no value for speed 
+			speed = 0.5                  
+		}
+		
 		if (wxdirection < 0)										 //If the direction is less than 0 (when called set to -1 for reverse)
 		{
-		TalonSRX1->Set(-.5); TalonSRX2->Set(-.5); TalonSRX3->Set(.5); TalonSRX4->Set(.5); //Set the talons to go in reverse (wiring)
-		Wait(wxtime);																	 //Wait for however long time is
-		TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0);		 //Than turn them off
+			TalonSRX1->Set(speed * -1); TalonSRX2->Set(speed * -1); TalonSRX3->Set(speed); TalonSRX4->Set(speed); //Set the talons to go in reverse (wiring)
+			Wait(wxtime);																	 //Wait for however long time is
+			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0);		 //Than turn them off
 		}
 		if (wxdirection > 0) 										//If the direction is greater than 0 (when called set to 1 for forward)
 		{
-		TalonSRX1->Set(.5); TalonSRX2->Set(.5); TalonSRX3->Set(-.5); TalonSRX4->Set(-.5);     //Set the talons to go forward (wiring)
-		Wait(wxtime);																		//Wait for time
-		TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0); 		//Than turn them off
+			TalonSRX1->Set(speed); TalonSRX2->Set(speed); TalonSRX3->Set(speed * -1); TalonSRX4->Set(speed * -1);     //Set the talons to go forward (wiring)
+			Wait(wxtime);																		//Wait for time
+			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0); 		//Than turn them off
+		}
+	}
+	
+		void Strafe(int wxdirection, float wxtime, float wxspeed) //Strafe takes direction and time, direction choses left-strafe or right-strafe time decides the time
+	{	
+		float speed = wxspeed;               
+		if (speed > 1) {
+			speed = 1;	
+		}
+		
+		if (speed <= 0) 
+		{
+			speed = 0.5
+		}
+		
+		
+		if (wxdirection < 0)										 //If the direction is less than 0 (when called set to -1 for reverse)
+		{                                            //I don't actually know if I'm currently controlling the right motors
+			TalonSRX1->Set(speed); TalonSRX2->Set(speed * -1); TalonSRX3->Set(speed * -1); TalonSRX4->Set(speed); //Set the talons to go in reverse (wiring)
+			Wait(wxtime);																	 //Wait for however long time is
+			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0);		 //Than turn them off
+		}
+		if (wxdirection > 0) 										//If the direction is greater than 0 (when called set to 1 for forward)
+		{
+			TalonSRX1->Set(speed * -1); TalonSRX2->Set(speed); TalonSRX3->Set(speed); TalonSRX4->Set(speed * -1);     //Set the talons to go forward (wiring)
+			Wait(wxtime);																//Wait for time
+			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0); 		//Than turn them off
 		}
 	}
 															////Turn////
-	void Turn (int wxdirection, float wxtime) //Takes direction for left or right and time for the time to execute
+	void Turn (int wxdirection, float wxtime, float wxspeed) //Takes direction for left or right and time for the time to execute
 	{
+		float speed = wxspeed;
+		if (speed > 1) {
+			speed = 1;	
+		}
+		if (speed <= 0) {
+			speed = 0.5
+		}
+		
 		if (wxdirection < 0) 																//If direction if less than 0
 		{
-			TalonSRX1->Set(.5); TalonSRX2->Set(.5); TalonSRX3->Set(.5); TalonSRX4->Set(.5); //Turn the talons
+			TalonSRX1->Set(speed); TalonSRX2->Set(speed); TalonSRX3->Set(speed); TalonSRX4->Set(speed); //Turn the talons
 			Wait(wxtime);																	//Wait for time
 			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0);		//Turn the talons off
 		}
 		if (wxdirection > 0)																//If direction is greater than 1
 		{
-			TalonSRX1->Set(-.5); TalonSRX2->Set(-.5); TalonSRX3->Set(-.5); TalonSRX4->Set(-.5); //Turn the talons
+			TalonSRX1->Set(speed * -1); TalonSRX2->Set(speed * -1); TalonSRX3->Set(speed * -1); TalonSRX4->Set(speed * -1); //Turn the talons
 			Wait(wxtime);																		//Wait for time
 			TalonSRX1->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0);			//Turn the talons off
 		}
@@ -121,6 +171,34 @@ private:
 			ArmSolenoid->Set(DoubleSolenoid::Value::kOff);		//Turn the solenoid off
 		}
 	}
+	
+		void Lift(int wxdirection, float wxtime, float wxspeed) //Left takes direction and time, direction choses up or down time decides the time
+	{	
+		float speed = wxspeed;               
+		if (speed > 1) {
+			speed = 1;	
+		}
+		
+		if (speed <= 0) 
+		{
+			speed = 0.5
+		}
+		
+		
+		if (wxdirection < 0)										 //If the direction is less than 0 (when called set to -1 for reverse)
+		{                                       //I don't actually know if I'm currently controlling the right motors
+			LiftMotor->Set(speed); 
+			Wait(wxtime);																	 //Wait for however long time is
+			LiftMotor->Set(0); 
+		}
+		if (wxdirection > 0) 										//If the direction is greater than 0 (when called set to 1 for forward)
+		{
+			LiftMotor->Set(speed * -1);    
+			Wait(wxtime);																//Wait for time
+			LiftMotor->Set(0); TalonSRX2->Set(0); TalonSRX3->Set(0); TalonSRX4->Set(0); 		//Than turn them off
+		}
+	}
+	
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	void AutonomousInit() //Called at the start of Autonomous%%%. If you want to initialize any variables for Autonomous put them here
 	{
@@ -129,6 +207,12 @@ private:
 
 	void AutonomousPeriodic() //Called periodicly during Autonomous
 	{
+	/*List of Autonomous Commands:
+	Drive(int wxdirection, float wxtime, float wxspeed) 
+	Strafe(int wxdirection, float wxtime, float wxspeed)
+	Turn(int wxdirection, float wxtime, float wxspeed)
+	ArmSolenoidCommand (int wxopenorclose, float wxtime)
+	*/	
 		Drive(1, 3);
 		Turn(1, .5);
 		Drive(1, 3);
